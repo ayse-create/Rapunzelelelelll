@@ -1,17 +1,21 @@
 <!doctype html>
 <html lang="tr" class="h-full">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Rapunzel'in Kulesi</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/_sdk/element_sdk.js"></script>
+
   <style>
-    body { box-sizing: border-box; }
     @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap');
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; width: 100%; }
+    body { overflow: hidden; } /* <-- doğal scroll kapalı */
+
     .fairy-tale-font { font-family: 'Cinzel Decorative', serif; }
+
     .sky-gradient {
       background: linear-gradient(
         180deg,
@@ -25,11 +29,12 @@
         #feca57 100%
       );
     }
+
     .tower-stone {
       background: linear-gradient(90deg, #4a4a4a 0%, #6b6b6b 20%, #5a5a5a 40%, #4a4a4a 60%, #6b6b6b 80%, #4a4a4a 100%);
       box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
     }
-    svg.braid-svg { display: block; margin: 0 auto; }
+
     .star {
       position: absolute;
       background: white;
@@ -40,227 +45,289 @@
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.3; transform: scale(0.8); }
     }
+
     @keyframes float {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-8px); }
     }
     .rapunzel-float { animation: float 3s ease-in-out infinite; }
+
     @keyframes sway {
       0%, 100% { transform: rotate(-5deg); }
       50% { transform: rotate(5deg); }
     }
     .sway { animation: sway 2s ease-in-out infinite; }
+
     .scroll-hint { animation: bounce 2s infinite; }
     @keyframes bounce {
       0%, 20%, 50%, 80%, 100% { transform: translateY(0) translateX(-50%); }
       40% { transform: translateY(-20px) translateX(-50%); }
       60% { transform: translateY(-10px) translateX(-50%); }
     }
+
     @keyframes sway-prince {
       0%, 100% { transform: translateX(-50%) rotate(-5deg); }
       50% { transform: translateX(-50%) rotate(5deg); }
     }
+
+    /* viewport + content (custom scroll) */
+    #viewport {
+      position: fixed;
+      inset: 0;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      touch-action: none; /* <-- kendi touch kontrolümüz */
+      background: black;
+    }
+
+    #content {
+      will-change: transform;
+    }
   </style>
+
   <style>@view-transition { navigation: auto; }</style>
   <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
 </head>
 
-<body class="h-full w-full overflow-x-hidden">
-  <div id="app" class="w-full sky-gradient relative">
+<body class="h-full w-full">
 
-    <!-- Stars -->
-    <div id="stars" class="fixed top-0 left-0 w-full h-96 pointer-events-none z-0"></div>
+  <!-- CUSTOM SCROLL VIEWPORT -->
+  <div id="viewport">
+    <div id="content">
 
-    <!-- Scroll hint -->
-    <div class="fixed bottom-8 left-1/2 scroll-hint z-50 text-white text-center">
-      <div class="text-2xl mb-2">👇</div>
-      <p class="fairy-tale-font text-sm opacity-80">Aşağı kaydır (1350000px!)</p>
-    </div>
+      <div id="app" class="w-full sky-gradient relative">
 
-    <!-- Prince at bottom - FIXED AT HAIR TIP -->
-    <div id="prince-climber"
-      style="position: fixed; bottom: 320px; left: 50%; transform: translateX(-50%); z-index: 50; pointer-events: none; width: 60px; height: 80px; animation: sway-prince 2s ease-in-out infinite;">
+        <!-- Stars -->
+        <div id="stars" class="fixed top-0 left-0 w-full h-96 pointer-events-none z-0"></div>
 
-      <!-- Cape -->
-      <div class="absolute top-0 -left-6 w-16 h-20 bg-gradient-to-b from-red-600 to-red-800 rounded-lg transform -rotate-20"
-        style="clip-path: polygon(30% 0%, 100% 0%, 100% 100%, 0% 80%); z-index: 0;"></div>
-
-      <!-- Body -->
-      <div class="relative z-10">
-        <!-- Head -->
-        <div class="w-7 h-7 mx-auto rounded-full" style="background: linear-gradient(to bottom, #ffdab9, #ffe4c4);">
-          <!-- Hair -->
-          <div class="absolute -top-1 left-0 w-7 h-3 bg-gradient-to-b from-amber-800 to-amber-900 rounded-t-full"></div>
-          <!-- Eyes -->
-          <div class="absolute top-2 left-1.5 w-1 h-1 bg-blue-800 rounded-full"></div>
-          <div class="absolute top-2 right-1.5 w-1 h-1 bg-blue-800 rounded-full"></div>
+        <!-- Scroll hint (ters swipe anlatımı) -->
+        <div id="hint" class="fixed top-8 left-1/2 scroll-hint z-50 text-white text-center">
+          <div class="text-2xl mb-2">👇</div>
+          <p class="fairy-tale-font text-sm opacity-80">Üstten tut, aşağı sürükle ⤵️ (prens yukarı tırmanır)</p>
         </div>
 
-        <!-- Crown -->
-        <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 text-xs">👑</div>
+        <!-- Prince (pozisyonu JS ile tırmanacak) -->
+        <div id="prince-climber"
+          style="position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 50; pointer-events: none; width: 60px; height: 80px; animation: sway-prince 2s ease-in-out infinite;">
 
-        <!-- Torso -->
-        <div class="w-8 h-6 mx-auto bg-gradient-to-b from-blue-600 to-blue-800 rounded-lg relative">
-          <div class="absolute top-1 left-1/2 transform -translate-x-1/2 w-4 h-0.5 bg-yellow-400 rounded"></div>
-        </div>
+          <!-- Cape -->
+          <div class="absolute top-0 -left-6 w-16 h-20 bg-gradient-to-b from-red-600 to-red-800 rounded-lg transform -rotate-20"
+            style="clip-path: polygon(30% 0%, 100% 0%, 100% 100%, 0% 80%); z-index: 0;"></div>
 
-        <!-- Arms -->
-        <div class="absolute top-6 -right-3 w-9 h-2 bg-gradient-to-r from-blue-600 to-blue-700 rounded-full transform -rotate-45"
-          style="z-index: 3;"></div>
-
-        <!-- Hands -->
-        <div class="absolute top-3 -right-5 w-2 h-2 rounded-full" style="background: #ffdab9;"></div>
-
-        <!-- Legs -->
-        <div class="flex gap-0.5 justify-center">
-          <div class="w-2.5 h-6 bg-gradient-to-b from-gray-700 to-gray-900 rounded-b"></div>
-          <div class="w-2.5 h-6 bg-gradient-to-b from-gray-700 to-gray-900 rounded-b"></div>
-        </div>
-
-        <!-- Boots -->
-        <div class="absolute bottom-0 left-0.5 w-3 h-1.5 bg-amber-900 rounded"></div>
-        <div class="absolute bottom-0.5 left-4.5 w-3 h-1.5 bg-amber-900 rounded"></div>
-      </div>
-    </div>
-
-    <!-- Title -->
-    <div class="text-center pt-12 pb-8 relative z-10">
-      <h1 class="fairy-tale-font text-4xl md:text-6xl text-yellow-300 drop-shadow-lg mb-4"
-        style="text-shadow: 0 0 20px rgba(255,215,0,0.5);">✨ Rapunzel ✨</h1>
-      <p class="text-purple-200 text-lg">Sihirli Saç Masalı</p>
-    </div>
-
-    <!-- Moon -->
-    <div class="absolute top-20 right-10 md:right-20 z-10">
-      <div class="w-20 h-20 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-yellow-100 to-yellow-300 shadow-lg"
-        style="box-shadow: 0 0 60px rgba(255,255,200,0.6);"></div>
-    </div>
-
-    <!-- Rapunzel at top -->
-    <div class="relative z-20 w-full flex justify-center">
-
-      <!-- Roof -->
-      <div class="w-0 h-0"
-        style="border-left: 100px solid transparent; border-right: 100px solid transparent; border-bottom: 80px solid #5d4e37; position: absolute; top: -80px;">
-      </div>
-
-      <!-- Flag -->
-      <div class="absolute -top-12 text-4xl">🚩</div>
-
-      <!-- Tower top -->
-      <div class="tower-stone w-56 relative" style="height: 140px; border-bottom: 20px solid rgba(60, 60, 60, 0.7);">
-        <!-- Window -->
-        <div class="absolute top-6 left-1/2 transform -translate-x-1/2 w-32 h-28 bg-gradient-to-b from-blue-900 to-purple-900 rounded-t-full border-4 border-stone-600 overflow-hidden">
-          <div class="absolute inset-0 bg-gradient-to-b from-yellow-500/20 to-transparent"></div>
-
-          <!-- Rapunzel -->
-          <div class="rapunzel-float absolute bottom-0 left-1/2 transform -translate-x-1/2">
-            <!-- Hair behind -->
-            <div class="absolute -top-2 left-1/2 transform -translate-x-1/2 w-16 h-12 bg-gradient-to-b from-yellow-400 to-yellow-500 rounded-t-full"></div>
-
-            <!-- Face -->
-            <div class="relative z-10 w-10 h-10 mx-auto rounded-full" style="background: linear-gradient(to bottom, #ffdab9, #ffe4c4);">
-              <div class="absolute top-3 left-2 w-2 h-2 bg-green-700 rounded-full"></div>
-              <div class="absolute top-3 right-2 w-2 h-2 bg-green-700 rounded-full"></div>
-              <div class="absolute top-5 left-1 w-2 h-1 bg-pink-300 rounded-full opacity-60"></div>
-              <div class="absolute top-5 right-1 w-2 h-1 bg-pink-300 rounded-full opacity-60"></div>
-              <div class="absolute top-6 left-1/2 transform -translate-x-1/2 w-3 h-1.5 border-b-2 border-pink-400 rounded-full"></div>
+          <!-- Body -->
+          <div class="relative z-10">
+            <!-- Head -->
+            <div class="w-7 h-7 mx-auto rounded-full" style="background: linear-gradient(to bottom, #ffdab9, #ffe4c4);">
+              <!-- Hair -->
+              <div class="absolute -top-1 left-0 w-7 h-3 bg-gradient-to-b from-amber-800 to-amber-900 rounded-t-full"></div>
+              <!-- Eyes -->
+              <div class="absolute top-2 left-1.5 w-1 h-1 bg-blue-800 rounded-full"></div>
+              <div class="absolute top-2 right-1.5 w-1 h-1 bg-blue-800 rounded-full"></div>
             </div>
 
-            <div class="absolute -top-1 left-1/2 transform -translate-x-1/2 text-lg">🌸</div>
+            <!-- Crown -->
+            <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 text-xs">👑</div>
 
-            <!-- Dress -->
-            <div class="w-12 h-10 mx-auto bg-gradient-to-b from-purple-400 to-purple-600 rounded-b-lg relative">
-              <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-2 bg-purple-300 rounded"></div>
+            <!-- Torso -->
+            <div class="w-8 h-6 mx-auto bg-gradient-to-b from-blue-600 to-blue-800 rounded-lg relative">
+              <div class="absolute top-1 left-1/2 transform -translate-x-1/2 w-4 h-0.5 bg-yellow-400 rounded"></div>
             </div>
 
             <!-- Arms -->
-            <div class="absolute bottom-2 -left-2 w-6 h-2 rounded-full transform -rotate-12" style="background: #ffdab9;"></div>
-            <div class="absolute bottom-2 -right-2 w-6 h-2 rounded-full transform rotate-12" style="background: #ffdab9;"></div>
+            <div class="absolute top-6 -right-3 w-9 h-2 bg-gradient-to-r from-blue-600 to-blue-700 rounded-full transform -rotate-45"
+              style="z-index: 3;"></div>
+
+            <!-- Hands -->
+            <div class="absolute top-3 -right-5 w-2 h-2 rounded-full" style="background: #ffdab9;"></div>
+
+            <!-- Legs -->
+            <div class="flex gap-0.5 justify-center">
+              <div class="w-2.5 h-6 bg-gradient-to-b from-gray-700 to-gray-900 rounded-b"></div>
+              <div class="w-2.5 h-6 bg-gradient-to-b from-gray-700 to-gray-900 rounded-b"></div>
+            </div>
+
+            <!-- Boots -->
+            <div class="absolute bottom-0 left-0.5 w-3 h-1.5 bg-amber-900 rounded"></div>
+            <div class="absolute bottom-0.5 left-4.5 w-3 h-1.5 bg-amber-900 rounded"></div>
           </div>
         </div>
 
-        <!-- Ivy -->
-        <div class="absolute top-2 left-2 text-xl sway">🌿</div>
-        <div class="absolute top-8 right-2 text-xl sway" style="animation-delay: 0.5s;">🌿</div>
+        <!-- Title -->
+        <div class="text-center pt-12 pb-8 relative z-10">
+          <h1 class="fairy-tale-font text-4xl md:text-6xl text-yellow-300 drop-shadow-lg mb-4"
+            style="text-shadow: 0 0 20px rgba(255,215,0,0.5);">✨ Rapunzel ✨</h1>
+          <p class="text-purple-200 text-lg">Sihirli Saç Masalı</p>
+        </div>
+
+        <!-- Moon -->
+        <div class="absolute top-20 right-10 md:right-20 z-10">
+          <div class="w-20 h-20 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-yellow-100 to-yellow-300 shadow-lg"
+            style="box-shadow: 0 0 60px rgba(255,255,200,0.6);"></div>
+        </div>
+
+        <!-- Rapunzel at top -->
+        <div class="relative z-20 w-full flex justify-center">
+          <!-- Roof -->
+          <div class="w-0 h-0"
+            style="border-left: 100px solid transparent; border-right: 100px solid transparent; border-bottom: 80px solid #5d4e37; position: absolute; top: -80px;">
+          </div>
+
+          <!-- Flag -->
+          <div class="absolute -top-12 text-4xl">🚩</div>
+
+          <!-- Tower top -->
+          <div class="tower-stone w-56 relative" style="height: 140px; border-bottom: 20px solid rgba(60, 60, 60, 0.7);">
+            <!-- Window -->
+            <div class="absolute top-6 left-1/2 transform -translate-x-1/2 w-32 h-28 bg-gradient-to-b from-blue-900 to-purple-900 rounded-t-full border-4 border-stone-600 overflow-hidden">
+              <div class="absolute inset-0 bg-gradient-to-b from-yellow-500/20 to-transparent"></div>
+
+              <!-- Rapunzel -->
+              <div class="rapunzel-float absolute bottom-0 left-1/2 transform -translate-x-1/2">
+                <!-- Hair behind -->
+                <div class="absolute -top-2 left-1/2 transform -translate-x-1/2 w-16 h-12 bg-gradient-to-b from-yellow-400 to-yellow-500 rounded-t-full"></div>
+
+                <!-- Face -->
+                <div class="relative z-10 w-10 h-10 mx-auto rounded-full" style="background: linear-gradient(to bottom, #ffdab9, #ffe4c4);">
+                  <div class="absolute top-3 left-2 w-2 h-2 bg-green-700 rounded-full"></div>
+                  <div class="absolute top-3 right-2 w-2 h-2 bg-green-700 rounded-full"></div>
+                  <div class="absolute top-5 left-1 w-2 h-1 bg-pink-300 rounded-full opacity-60"></div>
+                  <div class="absolute top-5 right-1 w-2 h-1 bg-pink-300 rounded-full opacity-60"></div>
+                  <div class="absolute top-6 left-1/2 transform -translate-x-1/2 w-3 h-1.5 border-b-2 border-pink-400 rounded-full"></div>
+                </div>
+
+                <div class="absolute -top-1 left-1/2 transform -translate-x-1/2 text-lg">🌸</div>
+
+                <!-- Dress -->
+                <div class="w-12 h-10 mx-auto bg-gradient-to-b from-purple-400 to-purple-600 rounded-b-lg relative">
+                  <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-2 bg-purple-300 rounded"></div>
+                </div>
+
+                <!-- Arms -->
+                <div class="absolute bottom-2 -left-2 w-6 h-2 rounded-full transform -rotate-12" style="background: #ffdab9;"></div>
+                <div class="absolute bottom-2 -right-2 w-6 h-2 rounded-full transform rotate-12" style="background: #ffdab9;"></div>
+              </div>
+            </div>
+
+            <!-- Ivy -->
+            <div class="absolute top-2 left-2 text-xl sway">🌿</div>
+            <div class="absolute top-8 right-2 text-xl sway" style="animation-delay: 0.5s;">🌿</div>
+          </div>
+        </div>
+
+        <!-- TOWER WITH BRAID DOWN THE CENTER -->
+        <div id="tower-and-braid" class="relative w-full flex justify-center">
+
+          <!-- Left tower column -->
+          <div class="tower-stone absolute left-1/2 transform -translate-x-1/2 z-0" id="tower-left"
+            style="width: 80px; height: 100%; background: linear-gradient(90deg, rgba(60,60,60,0.8) 0%, rgba(75,75,75,0.6) 50%, transparent 100%);">
+          </div>
+
+          <!-- Right tower column -->
+          <div class="tower-stone absolute left-1/2 transform translate-x-1/2 z-0" id="tower-right"
+            style="width: 80px; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(75,75,75,0.6) 50%, rgba(60,60,60,0.8) 100%);">
+          </div>
+
+          <!-- NEW: Braid SVG (pattern, smooth, lightweight) -->
+          <svg id="braid-svg" class="relative z-10"
+            viewBox="0 0 80 1350000"
+            style="width: 56px; height: 1350000px;"
+            preserveAspectRatio="none">
+
+            <defs>
+              <!-- gold gradients -->
+              <linearGradient id="g1" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#ffe27a" />
+                <stop offset="0.5" stop-color="#d4a017" />
+                <stop offset="1" stop-color="#b8860b" />
+              </linearGradient>
+
+              <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#fff1a6" />
+                <stop offset="0.5" stop-color="#daa520" />
+                <stop offset="1" stop-color="#b8860b" />
+              </linearGradient>
+
+              <!-- braid pattern -->
+              <pattern id="braidPattern" patternUnits="userSpaceOnUse" width="80" height="90">
+                <!-- soft shadow base -->
+                <rect x="0" y="0" width="80" height="90" fill="rgba(0,0,0,0)" />
+
+                <!-- left strand -->
+                <path d="M20 0 C5 15, 5 30, 20 45 C35 60, 35 75, 20 90"
+                      fill="none" stroke="url(#g1)" stroke-width="14" stroke-linecap="round" opacity="0.95"/>
+                <!-- right strand -->
+                <path d="M60 0 C75 15, 75 30, 60 45 C45 60, 45 75, 60 90"
+                      fill="none" stroke="url(#g1)" stroke-width="14" stroke-linecap="round" opacity="0.95"/>
+                <!-- center strand (slightly thicker, gives braid depth) -->
+                <path d="M40 0 C25 15, 25 30, 40 45 C55 60, 55 75, 40 90"
+                      fill="none" stroke="url(#g2)" stroke-width="16" stroke-linecap="round" opacity="0.95"/>
+
+                <!-- highlight line -->
+                <path d="M34 6 C26 16, 26 30, 34 40 C42 52, 42 66, 34 84"
+                      fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="4" stroke-linecap="round"/>
+
+                <!-- tiny sparkle every pattern -->
+                <text x="10" y="55" font-size="18">✨</text>
+              </pattern>
+
+              <!-- pink bow gradient -->
+              <linearGradient id="pink-bow" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ff8bd1" />
+                <stop offset="1" stop-color="#c71585" />
+              </linearGradient>
+            </defs>
+
+            <!-- main braid rect -->
+            <rect x="12" y="0" width="56" height="1350000" fill="url(#braidPattern)" />
+
+            <!-- end bow -->
+            <g transform="translate(0, 1350000)">
+              <circle cx="40" cy="0" r="7" fill="url(#g2)"></circle>
+              <ellipse cx="18" cy="18" rx="10" ry="16" fill="url(#pink-bow)"></ellipse>
+              <ellipse cx="62" cy="18" rx="10" ry="16" fill="url(#pink-bow)"></ellipse>
+              <circle cx="40" cy="18" r="7" fill="url(#pink-bow)"></circle>
+              <text x="40" y="44" font-size="22" text-anchor="middle">💎</text>
+            </g>
+          </svg>
+        </div>
+
+        <!-- Tower bottom -->
+        <div class="relative z-20 w-full flex justify-center">
+          <div class="tower-stone w-56" style="height: 200px;">
+            <div class="absolute top-10 left-4 w-8 h-6 bg-stone-500 rounded opacity-50"></div>
+            <div class="absolute top-30 right-6 w-10 h-5 bg-stone-600 rounded opacity-40"></div>
+            <div class="absolute top-60 left-8 w-6 h-8 bg-stone-500 rounded opacity-50"></div>
+          </div>
+        </div>
+
+        <!-- Grass -->
+        <div class="w-full relative z-20" style="height: 120px; background: linear-gradient(to bottom, #228b22, #006400);">
+          <div class="absolute bottom-0 left-0 w-full h-full" style="background: linear-gradient(to top, #2d5016, #228b22);"></div>
+          <div class="absolute top-4 left-10 text-3xl sway">🌷</div>
+          <div class="absolute top-8 left-32 text-2xl sway" style="animation-delay: 0.3s;">🌻</div>
+          <div class="absolute top-6 right-20 text-3xl sway" style="animation-delay: 0.6s;">🌹</div>
+          <div class="absolute top-10 right-40 text-2xl sway" style="animation-delay: 0.9s;">🌼</div>
+          <div class="absolute top-2 left-1/2 text-2xl sway" style="animation-delay: 0.4s;">💐</div>
+          <div class="absolute bottom-2 right-8 text-5xl">🐴</div>
+          <div class="absolute bottom-0 left-4 text-4xl">🌳</div>
+          <div class="absolute bottom-0 right-4 text-4xl">🌳</div>
+        </div>
+
+        <!-- The End -->
+        <div class="text-center py-12 bg-gradient-to-b from-green-900 to-green-950 relative z-20">
+          <div class="text-6xl mb-4">💕</div>
+          <h2 class="fairy-tale-font text-3xl md:text-5xl text-yellow-300 mb-4" style="text-shadow: 0 0 20px rgba(255,215,0,0.5);">Son</h2>
+          <p class="text-purple-200 text-lg">Ve sonsuza dek mutlu yaşadılar...</p>
+          <div class="mt-8 text-4xl">✨👸🤴✨</div>
+        </div>
+
       </div>
     </div>
-
-    <!-- TOWER WITH BRAID DOWN THE CENTER -->
-    <div id="tower-and-braid" class="relative w-full flex justify-center">
-
-      <!-- Left tower column -->
-      <div class="tower-stone absolute left-1/2 transform -translate-x-1/2 z-0" id="tower-left"
-        style="width: 80px; height: 100%; background: linear-gradient(90deg, rgba(60,60,60,0.8) 0%, rgba(75,75,75,0.6) 50%, transparent 100%);">
-      </div>
-
-      <!-- Right tower column -->
-      <div class="tower-stone absolute left-1/2 transform translate-x-1/2 z-0" id="tower-right"
-        style="width: 80px; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(75,75,75,0.6) 50%, rgba(60,60,60,0.8) 100%);">
-      </div>
-
-      <!-- Braid SVG in center - 30x LONGER! -->
-      <svg id="braid-svg" class="braid-svg relative z-10"
-        viewBox="0 0 40 1350000"
-        style="width: 40px; height: 1350000px;"
-        preserveAspectRatio="none">
-
-        <defs>
-          <linearGradient id="gold1" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#f4d03f;stop-opacity:1" />
-            <stop offset="50%" style="stop-color:#d4a017;stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#b8860b;stop-opacity:1" />
-          </linearGradient>
-
-          <linearGradient id="gold2" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:#ffd700;stop-opacity:1" />
-            <stop offset="50%" style="stop-color:#daa520;stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#b8860b;stop-opacity:1" />
-          </linearGradient>
-
-          <linearGradient id="gold3" x1="100%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:#f4d03f;stop-opacity:1" />
-            <stop offset="50%" style="stop-color:#d4a017;stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#b8860b;stop-opacity:1" />
-          </linearGradient>
-        </defs>
-      </svg>
-    </div>
-
-    <!-- Tower bottom -->
-    <div class="relative z-20 w-full flex justify-center">
-      <div class="tower-stone w-56" style="height: 200px;">
-        <div class="absolute top-10 left-4 w-8 h-6 bg-stone-500 rounded opacity-50"></div>
-        <div class="absolute top-30 right-6 w-10 h-5 bg-stone-600 rounded opacity-40"></div>
-        <div class="absolute top-60 left-8 w-6 h-8 bg-stone-500 rounded opacity-50"></div>
-      </div>
-    </div>
-
-    <!-- Grass -->
-    <div class="w-full relative z-20" style="height: 120px; background: linear-gradient(to bottom, #228b22, #006400);">
-      <div class="absolute bottom-0 left-0 w-full h-full" style="background: linear-gradient(to top, #2d5016, #228b22);"></div>
-      <div class="absolute top-4 left-10 text-3xl sway">🌷</div>
-      <div class="absolute top-8 left-32 text-2xl sway" style="animation-delay: 0.3s;">🌻</div>
-      <div class="absolute top-6 right-20 text-3xl sway" style="animation-delay: 0.6s;">🌹</div>
-      <div class="absolute top-10 right-40 text-2xl sway" style="animation-delay: 0.9s;">🌼</div>
-      <div class="absolute top-2 left-1/2 text-2xl sway" style="animation-delay: 0.4s;">💐</div>
-      <div class="absolute bottom-2 right-8 text-5xl">🐴</div>
-      <div class="absolute bottom-0 left-4 text-4xl">🌳</div>
-      <div class="absolute bottom-0 right-4 text-4xl">🌳</div>
-    </div>
-
-    <!-- The End -->
-    <div class="text-center py-12 bg-gradient-to-b from-green-900 to-green-950 relative z-20">
-      <div class="text-6xl mb-4">💕</div>
-      <h2 class="fairy-tale-font text-3xl md:text-5xl text-yellow-300 mb-4" style="text-shadow: 0 0 20px rgba(255,215,0,0.5);">Son</h2>
-      <p class="text-purple-200 text-lg">Ve sonsuza dek mutlu yaşadılar...</p>
-      <div class="mt-8 text-4xl">✨👸🤴✨</div>
-    </div>
-
   </div>
 
   <script>
-    // Generate stars
+    // Stars
     function generateStars() {
       const starsContainer = document.getElementById('stars');
       for (let i = 0; i < 100; i++) {
@@ -275,163 +342,136 @@
       }
     }
 
-    // Generate smooth braided braid - 30X LONGER!
-    // SADECE YÖN DEĞİŞTİRİLDİ: wave ters çevrildi.
-    function generateBraid() {
-      const svg = document.getElementById('braid-svg');
-      const segments = 67500; // 30x longer = 1350000px!
-      const segmentHeight = 20;
-
-      for (let i = 0; i < segments; i++) {
-        const y = i * segmentHeight;
-
-        // YÖN TERS (tek değişiklik)
-        const wave = -Math.sin(i * 0.1) * 8;
-
-        // Sol tel
-        const leftX = 8 + wave;
-        const circle1 = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-        circle1.setAttribute('cx', leftX);
-        circle1.setAttribute('cy', y);
-        circle1.setAttribute('rx', '4');
-        circle1.setAttribute('ry', '7');
-        circle1.setAttribute('fill', 'url(#gold1)');
-        circle1.setAttribute('opacity', '0.9');
-        svg.appendChild(circle1);
-
-        // Orta tel
-        const centerX = 20;
-        const circle2 = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-        circle2.setAttribute('cx', centerX);
-        circle2.setAttribute('cy', y);
-        circle2.setAttribute('rx', '4');
-        circle2.setAttribute('ry', '8');
-        circle2.setAttribute('fill', 'url(#gold2)');
-        circle2.setAttribute('opacity', '0.95');
-        svg.appendChild(circle2);
-
-        // Sağ tel
-        const rightX = 32 - wave;
-        const circle3 = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-        circle3.setAttribute('cx', rightX);
-        circle3.setAttribute('cy', y);
-        circle3.setAttribute('rx', '4');
-        circle3.setAttribute('ry', '7');
-        circle3.setAttribute('fill', 'url(#gold3)');
-        circle3.setAttribute('opacity', '0.9');
-        svg.appendChild(circle3);
-
-        // Dekoration her 6750 segmente
-        if (i % 6750 === 3375) {
-          const items = ['🌸', '🦋', '✨', '🌺', '💫', '🌼', '🍀', '💜'];
-          const emoji = items[Math.floor(i / 6750) % items.length];
-          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          text.setAttribute('x', '-25');
-          text.setAttribute('y', y + 10);
-          text.setAttribute('font-size', '16');
-          text.setAttribute('text-anchor', 'middle');
-          text.textContent = emoji;
-          svg.appendChild(text);
-        }
-      }
-
-      // Toka ve yay sonunda
-      const bowY = segments * segmentHeight;
-
-      // Toka boncuğu
-      const bead = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      bead.setAttribute('cx', '20');
-      bead.setAttribute('cy', bowY);
-      bead.setAttribute('r', '6');
-      bead.setAttribute('fill', 'url(#gold2)');
-      svg.appendChild(bead);
-
-      // Pembe yay gradienti
-      const bowGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-      bowGradient.setAttribute('id', 'pink-bow');
-      bowGradient.setAttribute('x1', '0%');
-      bowGradient.setAttribute('y1', '0%');
-      bowGradient.setAttribute('x2', '0%');
-      bowGradient.setAttribute('y2', '100%');
-
-      const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-      stop1.setAttribute('offset', '0%');
-      stop1.setAttribute('style', 'stop-color:#ff69b4;stop-opacity:1');
-
-      const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-      stop2.setAttribute('offset', '100%');
-      stop2.setAttribute('style', 'stop-color:#c71585;stop-opacity:1');
-
-      bowGradient.appendChild(stop1);
-      bowGradient.appendChild(stop2);
-      svg.querySelector('defs').appendChild(bowGradient);
-
-      // Sol loop
-      const leftLoop = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-      leftLoop.setAttribute('cx', '8');
-      leftLoop.setAttribute('cy', bowY + 15);
-      leftLoop.setAttribute('rx', '8');
-      leftLoop.setAttribute('ry', '14');
-      leftLoop.setAttribute('fill', 'url(#pink-bow)');
-      svg.appendChild(leftLoop);
-
-      // Sağ loop
-      const rightLoop = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-      rightLoop.setAttribute('cx', '32');
-      rightLoop.setAttribute('cy', bowY + 15);
-      rightLoop.setAttribute('rx', '8');
-      rightLoop.setAttribute('ry', '14');
-      rightLoop.setAttribute('fill', 'url(#pink-bow)');
-      svg.appendChild(rightLoop);
-
-      // Yay merkezi
-      const bowCenter = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      bowCenter.setAttribute('cx', '20');
-      bowCenter.setAttribute('cy', bowY + 15);
-      bowCenter.setAttribute('r', '6');
-      bowCenter.setAttribute('fill', 'url(#pink-bow)');
-      svg.appendChild(bowCenter);
-
-      // Elmas
-      const diamond = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      diamond.setAttribute('x', '20');
-      diamond.setAttribute('y', bowY + 35);
-      diamond.setAttribute('font-size', '20');
-      diamond.setAttribute('text-anchor', 'middle');
-      diamond.textContent = '💎';
-      svg.appendChild(diamond);
-    }
-
-    // Update tower height
+    // Tower height matches braid SVG height
     function updateTowerHeight() {
       const svg = document.getElementById('braid-svg');
       const towerLeft = document.getElementById('tower-left');
       const towerRight = document.getElementById('tower-right');
-      const totalHeight = svg.offsetHeight;
+      const totalHeight = svg.getBoundingClientRect().height;
       towerLeft.style.height = totalHeight + 'px';
       towerRight.style.height = totalHeight + 'px';
     }
 
-    // Initialize
     generateStars();
-    generateBraid();
     updateTowerHeight();
     window.addEventListener('resize', updateTowerHeight);
 
-    // Hide hint after scroll
-    let hasScrolled = false;
-    window.addEventListener('scroll', () => {
-      if (!hasScrolled && window.scrollY > 100) {
-        hasScrolled = true;
-        const hint = document.querySelector('.scroll-hint');
+    // -------------------------
+    // CUSTOM INVERTED "SCROLL"
+    // -------------------------
+    const viewport = document.getElementById('viewport');
+    const content = document.getElementById('content');
+    const prince = document.getElementById('prince-climber');
+    const hint = document.getElementById('hint');
+
+    let maxOffset = 0;   // normal scrollTop max
+    let offset = 0;      // current virtual scrollTop (0 = top)
+    let startY = null;
+    let lastY = null;
+    let hasMoved = false;
+
+    function computeMaxOffset() {
+      // content total height (after layout)
+      const contentHeight = content.getBoundingClientRect().height;
+      const vh = window.innerHeight;
+      maxOffset = Math.max(0, contentHeight - vh);
+    }
+
+    function applyTransform() {
+      // content translate: normal scrollTop = offset
+      content.style.transform = `translate3d(0, ${-offset}px, 0)`;
+
+      // prince climbs based on progress from bottom -> top
+      // We START at bottom: offset = maxOffset
+      const progress = maxOffset === 0 ? 0 : (maxOffset - offset) / maxOffset; // 0 bottom, 1 top
+      const climbRange = Math.max(0, window.innerHeight - 220);
+      const y = progress * climbRange;
+      prince.style.bottom = `${40 + y}px`;
+
+      // hint fade
+      if (!hasMoved && Math.abs(progress) > 0.01) {
+        hasMoved = true;
         if (hint) {
+          hint.style.transition = 'opacity 0.4s ease';
           hint.style.opacity = '0';
-          setTimeout(() => hint.style.display = 'none', 500);
+          setTimeout(() => hint.style.display = 'none', 450);
         }
       }
+    }
+
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+    function jumpToBottom() {
+      computeMaxOffset();
+      // START AT GROUND
+      offset = maxOffset;   // bottom
+      applyTransform();
+    }
+
+    // Touch controls (inverted):
+    // swipe DOWN (deltaY>0) => offset DECREASES => content goes UP (you go up the tower)
+    function onTouchStart(e) {
+      const t = e.touches ? e.touches[0] : e;
+      startY = t.clientY;
+      lastY = t.clientY;
+    }
+
+    function onTouchMove(e) {
+      if (startY === null) return;
+      const t = e.touches ? e.touches[0] : e;
+      const dy = t.clientY - lastY; // positive if finger moves down
+      lastY = t.clientY;
+
+      // INVERT: offset -= dy
+      offset = clamp(offset - dy * 1.2, 0, maxOffset);
+      applyTransform();
+
+      e.preventDefault();
+    }
+
+    function onTouchEnd() {
+      startY = null;
+      lastY = null;
+    }
+
+    // Wheel (desktop) inverted as well
+    function onWheel(e) {
+      // wheel down (deltaY>0) normally goes down; we want opposite
+      offset = clamp(offset - e.deltaY * 0.9, 0, maxOffset);
+      applyTransform();
+      e.preventDefault();
+    }
+
+    // Init after layout
+    window.addEventListener('load', () => {
+      // In case heights settle a bit late
+      setTimeout(() => {
+        jumpToBottom();
+        updateTowerHeight();
+        computeMaxOffset();
+        jumpToBottom();
+      }, 50);
     });
 
-    // Element SDK
+    window.addEventListener('resize', () => {
+      computeMaxOffset();
+      offset = clamp(offset, 0, maxOffset);
+      applyTransform();
+      updateTowerHeight();
+    });
+
+    viewport.addEventListener('touchstart', onTouchStart, { passive: false });
+    viewport.addEventListener('touchmove', onTouchMove, { passive: false });
+    viewport.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    viewport.addEventListener('mousedown', onTouchStart);
+    viewport.addEventListener('mousemove', (e) => { if (startY !== null) onTouchMove(e); });
+    viewport.addEventListener('mouseup', onTouchEnd);
+    viewport.addEventListener('mouseleave', onTouchEnd);
+
+    viewport.addEventListener('wheel', onWheel, { passive: false });
+
+    // Element SDK (aynı)
     const defaultConfig = {};
     async function onConfigChange(config) {}
     function mapToCapabilities(config) {
@@ -444,34 +484,31 @@
   </script>
 
   <script>
-    (function () {
-      function c() {
-        var b = a.contentDocument || a.contentWindow.document;
-        if (b) {
-          var d = b.createElement('script');
-          d.innerHTML =
-            "window.__CF$cv$params={r:'9c93f5dd734de907',t:'MTc3MDMxMDc4OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";
-          b.getElementsByTagName('head')[0].appendChild(d);
+    (function(){
+      function c(){
+        var b=a.contentDocument||a.contentWindow.document;
+        if(b){
+          var d=b.createElement('script');
+          d.innerHTML="window.__CF$cv$params={r:'9c93f5dd734de907',t:'MTc3MDMxMDc4OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";
+          b.getElementsByTagName('head')[0].appendChild(d)
         }
       }
-      if (document.body) {
-        var a = document.createElement('iframe');
-        a.height = 1;
-        a.width = 1;
-        a.style.position = 'absolute';
-        a.style.top = 0;
-        a.style.left = 0;
-        a.style.border = 'none';
-        a.style.visibility = 'hidden';
+      if(document.body){
+        var a=document.createElement('iframe');
+        a.height=1;a.width=1;
+        a.style.position='absolute';
+        a.style.top=0;a.style.left=0;
+        a.style.border='none';
+        a.style.visibility='hidden';
         document.body.appendChild(a);
-        if ('loading' !== document.readyState) c();
-        else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c);
-        else {
-          var e = document.onreadystatechange || function () { };
-          document.onreadystatechange = function (b) {
+        if('loading'!==document.readyState)c();
+        else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);
+        else{
+          var e=document.onreadystatechange||function(){};
+          document.onreadystatechange=function(b){
             e(b);
-            'loading' !== document.readyState && (document.onreadystatechange = e, c());
-          };
+            'loading'!==document.readyState&&(document.onreadystatechange=e,c())
+          }
         }
       }
     })();
